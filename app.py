@@ -7,6 +7,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
+
+MADA_TZ = ZoneInfo("Indian/Antananarivo")
+
+def heure_locale():
+    return datetime.now(MADA_TZ)
+
+def date_locale():
+    return heure_locale().date()
 
 import pandas as pd
 import plotly.express as px
