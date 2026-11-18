@@ -1,6 +1,8 @@
 """Données de démonstration (identifiants préfixés « demo », supprimables en un clic)."""
 from datetime import date
 
+from . import storage
+
 # (heure, catégorie, nature, agent, description, action vigie, informé, statut, priorité)
 _ROWS = [
     ("08:00", "Autre événement", "Action réalisée", "", "Prise de poste de la vigie.", "", "", "Information", "Basse"),
@@ -26,7 +28,7 @@ _ROWS = [
 
 
 def demo_events(day=None):
-    day = day or date.today()
+    day = day or storage.today()
     out = []
     for i, (h, cat, nat, ag, desc, act, inf, stat, prio) in enumerate(_ROWS, 1):
         out.append({"id": f"demo{day:%y%m%d}{i:02d}", "date": day.isoformat(), "heure": h,
