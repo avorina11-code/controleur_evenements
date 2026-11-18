@@ -4,7 +4,7 @@ import os
 import shutil
 import time as _time
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,8 +23,30 @@ EVENT_FIELDS = ["id", "date", "heure", "saisi_le", "agent", "activite", "categor
                 "historique"]
 
 
+# Fuseau horaire de la vigie (Madagascar, UTC+3, sans heure d'été). Modifiable via la variable
+# d'environnement VIGIE_TZ. Indispensable quand l'application tourne sur un serveur réglé en UTC.
+TZ_NAME = os.environ.get("VIGIE_TZ", "Indian/Antananarivo")
+
+
+def _tz():
+    try:
+        from zoneinfo import ZoneInfo
+        return ZoneInfo(TZ_NAME)
+    except Exception:  # tzdata absent (Windows) : Madagascar = UTC+3 fixe
+        return timezone(timedelta(hours=3))
+
+
+def now():
+    """Heure locale actuelle de la vigie (naïve, sans fuseau), indépendante de l'horloge du serveur."""
+    return datetime.now(_tz()).replace(tzinfo=None)
+
+
+def today():
+    return now().date()
+
+
 def _now():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def new_id():
@@ -134,7 +156,7 @@ def _backup(force=False):
     if not force and existing and _time.time() - existing[0].stat().st_mtime < BACKUP_EVERY_SEC:
         return
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(DB_FILE, BACKUP_DIR / f"logbook_{datetime.now():%Y%m%d_%H%M%S}.json")
+    shutil.copyfile(DB_FILE, BACKUP_DIR / f"logbook_{now():%Y%m%d_%H%M%S}.json")
     for old in list_backups()[MAX_BACKUPS:]:
         old.unlink(missing_ok=True)
 
@@ -158,7 +180,7 @@ def load():
             raise ValueError(errs[0])
         return normalize_db(data), None
     except Exception as exc:  # fichier illisible ou invalide
-        aside = DATA_DIR / f"logbook_CORROMPU_{datetime.now():%Y%m%d_%H%M%S}.json"
+        aside = DATA_DIR / f"logbook_CORROMPU_{now():%Y%m%d_%H%M%S}.json"
         shutil.copyfile(DB_FILE, aside)
         for b in list_backups():
             try:
