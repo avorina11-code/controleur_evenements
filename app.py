@@ -7,15 +7,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from datetime import date, datetime, time, timedelta
-from zoneinfo import ZoneInfo
-
-MADA_TZ = ZoneInfo("Indian/Antananarivo")
-
-def heure_locale():
-    return datetime.now(MADA_TZ)
-
-def date_locale():
-    return heure_locale().date()
 
 import pandas as pd
 import plotly.express as px
@@ -54,16 +45,16 @@ def page_saisie(db):
                            "Cochez pour saisir l'heure réelle d'un fait passé.")
                 use_dt = st.checkbox("Saisir une date et une heure précises", key="f_use_dt")
                 c1, c2 = st.columns(2)
-                d = c1.date_input("Date", value=date.today(), key="f_date")
-                t = c2.time_input("Heure", value=datetime.now().time().replace(second=0, microsecond=0),
+                d = c1.date_input("Date", value=storage.today(), key="f_date")
+                t = c2.time_input("Heure", value=storage.now().time().replace(second=0, microsecond=0),
                                   step=60, key="f_time")
             submitted = st.form_submit_button("➕ Enregistrer l'événement", type="primary")
         st.caption("Raccourcis : Alt+N place le curseur dans « Description » · Ctrl+Entrée valide le formulaire.")
         if submitted:
-            ev_dt = datetime.combine(d, t) if use_dt else datetime.now()
+            ev_dt = datetime.combine(d, t) if use_dt else storage.now()
             if not vals["description"].strip():
                 st.error("Ajoutez une courte description du fait.")
-            elif ev_dt > datetime.now() + timedelta(minutes=1):
+            elif ev_dt > storage.now() + timedelta(minutes=1):
                 st.error("L'heure de l'événement est dans le futur : corrigez la date ou l'heure.")
             else:
                 ev = storage.add_event(db, date=ev_dt.date().isoformat(), heure=ev_dt.strftime("%H:%M"), **vals)
@@ -74,7 +65,7 @@ def page_saisie(db):
 
     with right:
         h1, h2 = st.columns([1, 1])
-        day = h1.date_input("Journée affichée", value=date.today(), key="home_day")
+        day = h1.date_input("Journée affichée", value=storage.today(), key="home_day")
         rev = h2.toggle("Plus récent en haut", key="home_rev")
         df = analysis.to_df(db["events"])
         dday = df[df["date"] == day.isoformat()]
@@ -99,7 +90,7 @@ def page_journee(db):
     ui.hero("Reconstitution de la journée", "Toute la journée reconstruite à partir des seuls faits enregistrés.")
     df = analysis.to_df(db["events"])
     c1, c2, c3 = st.columns(3)
-    day = c1.date_input("Date", value=date.today(), key="j_date")
+    day = c1.date_input("Date", value=storage.today(), key="j_date")
     t_from = c2.time_input("De", value=time(0, 0), step=60, key="j_from")
     t_to = c3.time_input("À", value=time(23, 59), step=60, key="j_to")
     if t_to < t_from:
@@ -192,7 +183,7 @@ def _layout(fig, h=330):
 def page_dashboard(db):
     ui.hero("Tableau de bord opérationnel", "Indicateurs et répartitions sur la période choisie.")
     df = analysis.to_df(db["events"])
-    today = date.today()
+    today = storage.today()
     periode = st.selectbox("Période", ["Aujourd'hui", "7 derniers jours", "30 derniers jours",
                                        "Période personnalisée", "Toute la période"], key="db_p")
     a = b = None
@@ -258,7 +249,7 @@ def page_recherche(db):
         acts = a.multiselect("Activité", sorted({x for x in df["activite"] if x}) if not df.empty else [], key="s_ac")
         prios = b.multiselect("Priorité", PRIORITES, key="s_pr")
         if st.checkbox("Limiter à une période", key="s_per"):
-            r = st.date_input("Du … au …", value=(date.today() - timedelta(days=7), date.today()), key="s_rng")
+            r = st.date_input("Du … au …", value=(storage.today() - timedelta(days=7), storage.today()), key="s_rng")
             if isinstance(r, (tuple, list)) and len(r) == 2:
                 d1, d2 = r
         if st.checkbox("Limiter à une plage horaire", key="s_hr"):
@@ -290,11 +281,11 @@ def page_donnees(db):
     t_exp, t_imp, t_bak, t_tr, t_demo = st.tabs(["Exporter", "Importer", "Sauvegardes", "Corbeille", "Démonstration"])
 
     with t_exp:
-        stamp = datetime.now().strftime("%Y%m%d_%H%M")
+        stamp = storage.now().strftime("%Y%m%d_%H%M")
         st.download_button("💾 Sauvegarde complète (JSON réimportable)", storage.export_all(db),
                            f"vigie_logbook_complet_{stamp}.json", "application/json")
         st.markdown("**Journée précise**")
-        day = st.date_input("Date", value=date.today(), key="x_day")
+        day = st.date_input("Date", value=storage.today(), key="x_day")
         dd = df[df["date"] == day.isoformat()] if not df.empty else df
         a, b, c, d = st.columns(4)
         a.download_button("JSON du jour", storage.export_day(db, day.isoformat()), f"vigie_{day}.json", "application/json")
@@ -436,7 +427,7 @@ with st.sidebar:
                 unsafe_allow_html=True)
     ui.clock()
     page = st.radio("Navigation", list(PAGES), label_visibility="collapsed")
-    today_iso = date.today().isoformat()
+    today_iso = storage.today().isoformat()
     today_ev = [e for e in db["events"] if e["date"] == today_iso]
     pending = sum(1 for e in today_ev if e["statut"] in OPEN_STATUTS)
     st.markdown(f'<div class="side-stat"><div><b>{len(today_ev)}</b><small>événements du jour</small></div>'
