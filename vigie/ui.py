@@ -12,7 +12,8 @@ CSS = """
 <style>
 :root{--navy:#0B1F3A;--navy2:#16315C;--blue:#1D4ED8;--bg:#F3F5F9;--line:#D9E0EC;--mute:#64748B}
 .stApp{background:var(--bg)}
-.block-container{padding-top:1.1rem;max-width:1450px}
+.block-container{padding-top:4rem;max-width:1450px}
+[data-testid="stHeader"]{background:rgba(243,245,249,.92)}
 [data-testid="stSidebar"]{background:linear-gradient(180deg,#0B1F3A 0%,#102A50 100%)}
 [data-testid="stSidebar"] *{color:#E6ECF7}
 [data-testid="stSidebar"] [role="radiogroup"] label{padding:7px 10px;border-radius:8px;margin-bottom:2px}
