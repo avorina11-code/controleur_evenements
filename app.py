@@ -54,19 +54,49 @@ def page_saisie(db):
                            "Cochez pour saisir l'heure réelle d'un fait passé.")
                 use_dt = st.checkbox("Saisir une date et une heure précises", key="f_use_dt")
                 c1, c2 = st.columns(2)
-                d = c1.date_input("Date", value=date.today(), key="f_date")
-                t = c2.time_input("Heure", value=datetime.now().time().replace(second=0, microsecond=0),
-                                  step=60, key="f_time")
-            submitted = st.form_submit_button("➕ Enregistrer l'événement", type="primary")
-        st.caption("Raccourcis : Alt+N place le curseur dans « Description » · Ctrl+Entrée valide le formulaire.")
-        if submitted:
-            ev_dt = datetime.combine(d, t) if use_dt else datetime.now()
-            if not vals["description"].strip():
-                st.error("Ajoutez une courte description du fait.")
-            elif ev_dt > datetime.now() + timedelta(minutes=1):
-                st.error("L'heure de l'événement est dans le futur : corrigez la date ou l'heure.")
-            else:
-                ev = storage.add_event(db, date=ev_dt.date().isoformat(), heure=ev_dt.strftime("%H:%M"), **vals)
+               d = c1.date_input("Date", value=date_locale(), key="f_date")
+t = c2.time_input(
+    "Heure",
+    value=heure_locale().time().replace(second=0, microsecond=0, tzinfo=None),
+    step=60,
+    key="f_time"
+)
+
+submitted = st.form_submit_button(
+    "➕ Enregistrer l'événement",
+    type="primary"
+)
+
+if submitted:
+    if use_dt:
+        ev_dt = datetime.combine(d, t).replace(tzinfo=MADA_TZ)
+    else:
+        ev_dt = heure_locale()
+
+    now_local = heure_locale()
+
+    if not vals["description"].strip():
+        st.error("Ajoutez une courte description du fait.")
+
+    elif ev_dt > now_local + timedelta(minutes=1):
+        st.error("L'heure de l'événement est dans le futur : corrigez la date ou l'heure.")
+
+    else:
+        ev = storage.add_event(
+            db,
+            date=ev_dt.date().isoformat(),
+            heure=ev_dt.strftime("%H:%M"),
+            **vals
+        )
+
+        storage.save(db)
+
+        st.session_state["_reset_form"] = True
+        st.session_state["_flash"] = (
+            f"Événement de {ev['heure']} enregistré "
+            f"({analysis.saisie_label(ev)})."
+        )
+        st.rerun()
                 storage.save(db)
                 st.session_state["_reset_form"] = True
                 st.session_state["_flash"] = f"Événement de {ev['heure']} enregistré ({analysis.saisie_label(ev)})."
